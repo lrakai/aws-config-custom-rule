@@ -41,19 +41,19 @@ function createPutEvaluationsRequest(event, configurationItem, compliance) {
     return putEvaluationsRequest;
 }
 
-function putEvaluations(context, putEvaluationsRequest) {
+function putEvaluations(callback, putEvaluationsRequest) {
     // Invoke the Config API to report the result of the evaluation
     config.putEvaluations(putEvaluationsRequest, function (err, data) {
         if (err) {
-            context.fail(err);
+            callback(err);
         } else {
-            context.succeed(data);
+            callback(null, "success");
         }
     });
 }
 
 // This is the handler that's invoked by Lambda
-exports.handler = function (event, context) {
+exports.handler = function (event, context, callback) {
     event = checkDefined(event, "event");
     var invokingEvent = JSON.parse(event.invokingEvent);
     var ruleParameters = JSON.parse(event.ruleParameters);
@@ -102,10 +102,10 @@ exports.handler = function (event, context) {
                 }
             }
             putEvaluationsRequest = createPutEvaluationsRequest(event, configurationItem, compliance);
-            putEvaluations(context, putEvaluations);
+            putEvaluations(callback, putEvaluations);
         });
     } else {
         putEvaluationsRequest = createPutEvaluationsRequest(event, configurationItem, compliance);
-        putEvaluations(context, putEvaluations);
+        putEvaluations(callback, putEvaluations);
     }
 };
