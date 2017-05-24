@@ -77,7 +77,7 @@ exports.handler = function (event, context, callback) {
 
         groupId = configurationItem.configuration.groupId;
 
-        var ec2 = aws.EC2({ apiVersion: '2016-11-15' });
+        var ec2 = new aws.EC2({ apiVersion: '2016-11-15' });
         var params = {
             DryRun: false,
             GroupIds: [
