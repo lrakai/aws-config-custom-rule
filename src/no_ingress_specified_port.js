@@ -61,13 +61,11 @@ exports.handler = function (event, context) {
     var compliance = 'NOT_APPLICABLE';
     var putEvaluationsRequest = {};
 
-    checkDefined(configurationItem, "configurationItem");
-    checkDefined(configurationItem.configuration, "configurationItem.configuration");
-    checkDefined(ruleParameters, "ruleParameters");
+    if (isApplicable(configurationItem, event)) {
 
-    if (isApplicable(invokingEvent.configurationItem, event)) {
-        // Invoke the compliance checking function.
-        compliance = evaluateCompliance(invokingEvent.configurationItem, context);
+        checkDefined(configurationItem, "configurationItem");
+        checkDefined(configurationItem.configuration, "configurationItem.configuration");
+        checkDefined(ruleParameters, "ruleParameters");
 
         // This is where it's determined whether the resource is compliant or not.
         // In this example, we look at the ip permissions of the EC2 security group and determine
