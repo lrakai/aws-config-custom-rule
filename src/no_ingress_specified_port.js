@@ -102,10 +102,10 @@ exports.handler = function (event, context, callback) {
                 }
             }
             putEvaluationsRequest = createPutEvaluationsRequest(event, configurationItem, compliance);
-            putEvaluations(callback, putEvaluations);
+            putEvaluations(callback, putEvaluationsRequest);
         });
     } else {
         putEvaluationsRequest = createPutEvaluationsRequest(event, configurationItem, compliance);
-        putEvaluations(callback, putEvaluations);
+        putEvaluations(callback, putEvaluationsRequest);
     }
 };
