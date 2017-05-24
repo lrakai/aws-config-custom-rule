@@ -65,6 +65,7 @@ exports.handler = function (event, context) {
 
     checkDefined(configurationItem, "configurationItem");
     checkDefined(configurationItem.configuration, "configurationItem.configuration");
+    checkDefined(ruleParameters, "ruleParameters");
 
     if (isApplicable(invokingEvent.configurationItem, event)) {
         // Invoke the compliance checking function.
@@ -96,8 +97,8 @@ exports.handler = function (event, context) {
                 for (var i = 0; i < ipPermissions.length; i++) {
                     var ipPermission = ipPermissions[i];
                     if (ipPermission.IpProtocol === 'tcp'
-                        && ipPermission.FromPort >= 3389
-                        && ipPermission.ToPort <= 3389) {
+                        && ipPermission.FromPort >= ruleParameters.port
+                        && ipPermission.ToPort <= ruleParameters.port) {
                         compliance = 'NON_COMPLIANT';
                         break;
                     }
