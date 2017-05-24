@@ -27,8 +27,6 @@ function createPutEvaluationsRequest(event, configurationItem, compliance) {
     var putEvaluationsRequest = {};
 
     // Put together the request that reports the evaluation status
-    // Note that we're choosing to report this evaluation against the resource that was passed in.
-    // You can choose to report this against any other resource type, as long as it is supported by Config rules
     putEvaluationsRequest.Evaluations = [
         {
             ComplianceResourceType: configurationItem.resourceType,
@@ -72,9 +70,9 @@ exports.handler = function (event, context) {
         compliance = evaluateCompliance(invokingEvent.configurationItem, context);
 
         // This is where it's determined whether the resource is compliant or not.
-        // In this example, we look at the tenancy of the EC2 instance and determine whether it matches 
-        // the "DesiredTenancy" parameter that is passed to the rule. If the tenancy is not of the DesiredTenancy type, the 
-        // instance is marked non-compliant. Otherwise, it is marked complaint. 
+        // In this example, we look at the ip permissions of the EC2 security group and determine
+        // if it allows ingress traffic on a specified tcp Port. If the Port is open, the 
+        // security group is marked non-compliant. Otherwise, it is marked complaint. 
         if ('AWS::EC2::SecurityGroup' !== configurationItem.resourceType) {
             return 'NOT_APPLICABLE';
         }
