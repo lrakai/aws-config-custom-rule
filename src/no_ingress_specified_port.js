@@ -75,7 +75,7 @@ exports.handler = function (event, context, callback) {
             return 'NOT_APPLICABLE';
         }
 
-        groupId = configuration_item["configuration"]["groupId"];
+        groupId = configurationItem.configuration.groupId;
 
         var ec2 = aws.EC2({ apiVersion: '2016-11-15' });
         var params = {
