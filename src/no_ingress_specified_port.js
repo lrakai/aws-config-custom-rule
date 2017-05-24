@@ -1,5 +1,5 @@
 //
-// Ensure a security group does not allow RDP ingress
+// Ensure a security group does not allow tcp ingress on a specified port
 //
 
 var aws = require('aws-sdk');
@@ -96,6 +96,7 @@ exports.handler = function (event, context) {
                 var IpPermissions = data.SecurityGroups[0].IpPermissions;
                 for (var i = 0; i < ipPermissions.length; i++) {
                     var ipPermission = ipPermissions[i];
+                    // The actual test condition
                     if (ipPermission.IpProtocol === 'tcp'
                         && ipPermission.FromPort >= ruleParameters.port
                         && ipPermission.ToPort <= ruleParameters.port) {
