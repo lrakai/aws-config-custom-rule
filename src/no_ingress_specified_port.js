@@ -89,10 +89,10 @@ exports.handler = function (event, context, callback) {
             if (err) {
                 compliance = 'NON_COMPLIANT';
             } else {
-                var IpPermissions = data.SecurityGroups[0].IpPermissions;
+                var ipPermissions = data.SecurityGroups[0].IpPermissions;
                 for (var i = 0; i < ipPermissions.length; i++) {
                     var ipPermission = ipPermissions[i];
-                    // The actual test condition
+                    // The actual test condition (allows default allow all rule (IpProtocol === '-1') to be compliant for demonstration purposes)
                     if (ipPermission.IpProtocol === 'tcp'
                         && ipPermission.FromPort >= ruleParameters.port
                         && ipPermission.ToPort <= ruleParameters.port) {
