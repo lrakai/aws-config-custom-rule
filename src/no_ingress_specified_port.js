@@ -62,7 +62,6 @@ exports.handler = function (event, context, callback) {
     var putEvaluationsRequest = {};
 
     if (isApplicable(configurationItem, event)) {
-
         checkDefined(configurationItem, "configurationItem");
         checkDefined(configurationItem.configuration, "configurationItem.configuration");
         checkDefined(ruleParameters, "ruleParameters");
