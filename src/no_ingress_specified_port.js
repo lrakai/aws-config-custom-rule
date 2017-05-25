@@ -36,7 +36,7 @@ function createPutEvaluationsRequest(event, configurationItem, compliance) {
         }
     ];
     putEvaluationsRequest.ResultToken = event.resultToken;
-    putEvaluationsRequest.TestMode = true;
+    putEvaluationsRequest.TestMode = false;
 
     return putEvaluationsRequest;
 }
