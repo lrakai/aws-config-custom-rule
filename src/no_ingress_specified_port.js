@@ -72,38 +72,39 @@ exports.handler = function (event, context, callback) {
         // if it allows ingress traffic on a specified tcp Port. If the Port is open, the 
         // security group is marked non-compliant. Otherwise, it is marked complaint. 
         if ('AWS::EC2::SecurityGroup' !== configurationItem.resourceType) {
-            return 'NOT_APPLICABLE';
-        }
-
-        groupId = configurationItem.configuration.groupId;
-
-        var ec2 = new aws.EC2({ apiVersion: '2016-11-15' });
-        var params = {
-            DryRun: false,
-            GroupIds: [
-                groupId
-            ]
-        };
-        ec2.describeSecurityGroups(params, function (err, data) {
-            var compliance = 'COMPLIANT';
-            if (err) {
-                compliance = 'NON_COMPLIANT';
-            } else {
-                var ipPermissions = data.SecurityGroups[0].IpPermissions;
-                for (var i = 0; i < ipPermissions.length; i++) {
-                    var ipPermission = ipPermissions[i];
-                    // The actual test condition (allows default allow all rule (IpProtocol === '-1') to be compliant for demonstration purposes)
-                    if (ipPermission.IpProtocol === 'tcp'
-                        && ipPermission.FromPort >= ruleParameters.port
-                        && ipPermission.ToPort <= ruleParameters.port) {
-                        compliance = 'NON_COMPLIANT';
-                        break;
-                    }
-                }
-            }
             putEvaluationsRequest = createPutEvaluationsRequest(event, configurationItem, compliance);
             putEvaluations(callback, putEvaluationsRequest);
-        });
+        } else {
+            groupId = configurationItem.configuration.groupId;
+
+            var ec2 = new aws.EC2({ apiVersion: '2016-11-15' });
+            var params = {
+                DryRun: false,
+                GroupIds: [
+                    groupId
+                ]
+            };
+            ec2.describeSecurityGroups(params, function (err, data) {
+                var compliance = 'COMPLIANT';
+                if (err) {
+                    compliance = 'NON_COMPLIANT';
+                } else {
+                    var ipPermissions = data.SecurityGroups[0].IpPermissions;
+                    for (var i = 0; i < ipPermissions.length; i++) {
+                        var ipPermission = ipPermissions[i];
+                        // The actual test condition (allows default allow all rule (IpProtocol === '-1') to be compliant for demonstration purposes)
+                        if (ipPermission.IpProtocol === 'tcp'
+                            && ipPermission.FromPort >= ruleParameters.port
+                            && ipPermission.ToPort <= ruleParameters.port) {
+                            compliance = 'NON_COMPLIANT';
+                            break;
+                        }
+                    }
+                }
+                putEvaluationsRequest = createPutEvaluationsRequest(event, configurationItem, compliance);
+                putEvaluations(callback, putEvaluationsRequest);
+            });
+        }
     } else {
         putEvaluationsRequest = createPutEvaluationsRequest(event, configurationItem, compliance);
         putEvaluations(callback, putEvaluationsRequest);
