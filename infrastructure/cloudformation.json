@@ -1,0 +1,453 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Cloud Academy Compliance check using AWS Config Rules (Managed & Custom)",
+  "Parameters": {
+    "Region": {
+      "Type": "String",
+      "Default": "us-west-2"
+    }
+  },
+  "Mappings": {
+    "UserConfig": {
+      "Login": {
+        "Name": "ca-lab-user",
+        "Pass": "ca-lab-user"
+      }
+    }
+  },
+  "Resources": {
+    "ConfigRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "config.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/",
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSConfigRole"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "config",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:PutObject*"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          "arn:aws:s3:::config-bucket-",
+                          {
+                            "Ref": "AWS::AccountId"
+                          },
+                          "/AWSLogs/",
+                          {
+                            "Ref": "AWS::AccountId"
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ],
+                  "Condition": {
+                    "StringLike": {
+                      "s3:x-amz-acl": "bucket-owner-full-control"
+                    }
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetBucketAcl"
+                  ],
+                  "Resource": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:s3:::config-bucket-",
+                        {
+                          "Ref": "AWS::AccountId"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "RoleName": "config-role-us-west-2"
+      }
+    },
+    "LambdaRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "lambda",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject"
+                  ],
+                  "Resource": "arn:aws:s3:::*/AWSLogs/*/Config/*"
+                },
+                {
+                  "Action": [
+                    "lambda:List*",
+                    "lambda:Get*",
+                    "lambda:TagResource",
+                    "lambda:UntagResource",
+                    "lambda:UpdateFunctionCode",
+                    "lambda:UpdateFunctionConfiguration",
+                    "lambda:Invoke",
+                    "lambda:InvokeAsync",
+                    "lambda:CreateFunction",
+                    "lambda:DeleteFunction",
+                    "kms:ListAliases",
+                    "cloudwatch:GetMetricStatistics",
+                    "config:PutEvaluations",
+                    "ec2:DescribeSecurityGroups",
+                    "config:Put*",
+                    "config:Get*",
+                    "config:List*",
+                    "config:Describe*"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ],
+        "RoleName": "config-lambda-role"
+      }
+    },
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/20",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Lab VPC"
+          }
+        ]
+      }
+    },
+    "Ec2SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "DependsOn": [
+        "CloudTrail"
+      ],
+      "Properties": {
+        "GroupDescription": "Allow incoming http traffic",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "3389",
+            "ToPort": "3389",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Web Servers"
+          }
+        ]
+      }
+    },
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Join": [
+            "",
+            [
+              "ca-labs-cloudtrail-bucket-",
+              {
+                "Ref": "AWS::AccountId"
+              }
+            ]
+          ]
+        }
+      }
+    },
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "S3Bucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AWSCloudTrailAclCheck",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              },
+              "Action": "s3:GetBucketAcl",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "S3Bucket"
+                    }
+                  ]
+                ]
+              }
+            },
+            {
+              "Sid": "AWSCloudTrailWrite",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              },
+              "Action": "s3:PutObject",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "S3Bucket"
+                    },
+                    "/AWSLogs/",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    "/*"
+                  ]
+                ]
+              },
+              "Condition": {
+                "StringEquals": {
+                  "s3:x-amz-acl": "bucket-owner-full-control"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "CloudTrail": {
+      "DependsOn": [
+        "BucketPolicy"
+      ],
+      "Type": "AWS::CloudTrail::Trail",
+      "Properties": {
+        "S3BucketName": {
+          "Ref": "S3Bucket"
+        },
+        "IsLogging": true
+      }
+    },
+    "User": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "LoginProfile": {
+          "Password": {
+            "Fn::FindInMap": [
+              "UserConfig",
+              "Login",
+              "Pass"
+            ]
+          }
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "user-policy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudtrail:DescribeTrails",
+                    "cloudtrail:GetTrailStatus",
+                    "cloudtrail:LookupEvents",
+                    "ec2:Describe*",
+                    "config:Put*",
+                    "config:Get*",
+                    "config:List*",
+                    "config:Describe*",
+                    "config:StartConfigRulesEvaluation",
+                    "config:StartConfigurationRecorder",
+                    "config:StopConfigurationRecorder",
+                    "iam:GetAccountAuthorizationDetails",
+                    "iam:GetAccountPasswordPolicy",
+                    "iam:GetAccountSummary",
+                    "iam:GetGroup",
+                    "iam:GetGroupPolicy",
+                    "iam:GetPolicy",
+                    "iam:GetPolicyVersion",
+                    "iam:GetRole",
+                    "iam:GetRolePolicy",
+                    "iam:GetUser",
+                    "iam:GetUserPolicy",
+                    "iam:ListAttachedGroupPolicies",
+                    "iam:ListAttachedRolePolicies",
+                    "iam:ListAttachedUserPolicies",
+                    "iam:ListEntitiesForPolicy",
+                    "iam:ListGroupPolicies",
+                    "iam:ListGroupsForUser",
+                    "iam:ListInstanceProfilesForRole",
+                    "iam:ListPolicyVersions",
+                    "iam:ListRolePolicies",
+                    "iam:ListUserPolicies",
+                    "s3:GetObject",
+                    "s3:GetAccelerateConfiguration",
+                    "s3:GetBucketAcl",
+                    "s3:GetBucketCORS",
+                    "s3:GetBucketLocation",
+                    "s3:GetBucketLogging",
+                    "s3:GetBucketNotification",
+                    "s3:GetBucketPolicy",
+                    "s3:GetBucketRequestPayment",
+                    "s3:GetBucketTagging",
+                    "s3:GetBucketVersioning",
+                    "s3:GetBucketWebsite",
+                    "s3:GetLifecycleConfiguration",
+                    "s3:GetReplicationConfiguration",
+                    "s3:ListAllMyBuckets",
+                    "dynamodb:ListTables",
+                    "cloudwatch:DescribeAlarms",
+                    "ec2:CreateTags",
+                    "ec2:RevokeSecurityGroupIngress",
+                    "kms:ListAliases",
+                    "lambda:ListAliases",
+                    "lambda:ListVersionsByFunction",
+                    "health:DescribeEventAggregates"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Action": [
+                    "iam:PassRole",
+                    "iam:AttachRolePolicy"
+                  ],
+                  "Resource": "arn:aws:iam::*:role/config-role-us-west-2",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "iam:ListRoles",
+                    "iam:ListRolePolicies"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "iam:PassRole"
+                  ],
+                  "Resource": "arn:aws:iam::*:role/config-lambda-role",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "lambda:GetFunction",
+                    "lambda:CreateFunction",
+                    "lambda:ListTags",
+                    "lambda:AddPermission"
+                  ],
+                  "Resource": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:lambda:us-west-2:",
+                        {
+                          "Ref": "AWS::AccountId"
+                        },
+                        ":function:evaluate-port-ingress"
+                      ]
+                    ]
+                  },
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "s3:CreateBucket"
+                  ],
+                  "Resource": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:s3:::config-bucket-",
+                        {
+                          "Ref": "AWS::AccountId"
+                        }
+                      ]
+                    ]
+                  },
+                  "Effect": "Allow"
+                }
+              ]
+            }
+          }
+        ],
+        "UserName": {
+          "Fn::FindInMap": [
+            "UserConfig",
+            "Login",
+            "Name"
+          ]
+        }
+      }
+    }
+  }
+}
