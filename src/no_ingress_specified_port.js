@@ -66,10 +66,10 @@ exports.handler = function (event, context, callback) {
         checkDefined(configurationItem.configuration, "configurationItem.configuration");
         checkDefined(ruleParameters, "ruleParameters");
 
-        // This is where it's determined whether the resource is compliant or not.
-        // In this example, we look at the ip permissions of the EC2 security group and determine
-        // if it allows ingress traffic on a specified tcp Port. If the Port is open, the 
-        // security group is marked non-compliant. Otherwise, it is marked complaint. 
+        // This is where it is determined whether the resource is compliant or not.
+        // In this example, we look at the IP permissions of the EC2 security group and determine
+        // if it allows ingress traffic on a specified TCP port. If the port is open, the 
+        // security group is marked non-compliant. Otherwise, it is marked compliant.  
         if ('AWS::EC2::SecurityGroup' !== configurationItem.resourceType) {
             putEvaluationsRequest = createPutEvaluationsRequest(event, configurationItem, compliance);
             putEvaluations(callback, putEvaluationsRequest);
